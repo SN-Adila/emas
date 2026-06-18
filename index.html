@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2pdf.js for High Quality PDF generation -->
+    <!-- html2pdf.js untuk penjanaan PDF kualiti tinggi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <script>
@@ -49,7 +49,7 @@
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
-        /* Custom scrollbar for desktop */
+        /* Scrollbar kustom untuk desktop */
         @media (min-width: 768px) {
             ::-webkit-scrollbar {
                 width: 6px;
@@ -187,7 +187,7 @@
                 <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div class="text-center sm:text-left">
                         <h4 class="font-bold text-emerald-900 text-base">Sedia untuk menambah laporan baharu?</h4>
-                        <p class="text-xs text-emerald-700 mt-1">Laporan boleh dijanakan terus ke format PDF rasmi dan disokong oleh fungsi storan automatik.</p>
+                        <p class="text-xs text-emerald-700 mt-1">Laporan akan dijanakan ke format PDF rasmi dan disokong oleh fungsi storan automatik ke Google Drive.</p>
                     </div>
                     <button onclick="switchTab('form')" class="w-full sm:w-auto px-5 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2 text-sm">
                         <i class="fa-solid fa-plus"></i>
@@ -424,12 +424,21 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var sheet = SpreadsheetApp.openById("1ReX5B40-6twj1K2mWnUT7wNpKEuVFQC-EHqmr-6wkOw").getActiveSheet();
     
-    // Simpan gambar ke Google Drive Folder (jika ada data gambar base64)
     // Folder Laporan PDF: 1CleTztYyzLrsOvhU36oeEMP2ybJpyaAf
+    var folderPdfId = "1CleTztYyzLrsOvhU36oeEMP2ybJpyaAf";
     // Folder Gambar: 1YsM-gEFzGlcZzRPTcjIoLezpn5Kvd9rD
     var folderGambarId = "1YsM-gEFzGlcZzRPTcjIoLezpn5Kvd9rD";
-    var imgUrls = ["", "", "", ""];
     
+    // Simpan PDF Laporan ke Google Drive Folder
+    var pdfUrl = "";
+    if (data.PDF_BASE64) {
+      var cleanPdfData = data.PDF_BASE64.split(",")[1];
+      var pdfBlob = Utilities.newBlob(Utilities.base64Decode(cleanPdfData), "application/pdf", "Laporan_" + data.NAMA_AKTIVITI + "_" + data.TARIKH + ".pdf");
+      var pdfFile = DriveApp.getFolderById(folderPdfId).createFile(pdfBlob);
+      pdfUrl = pdfFile.getUrl();
+    }
+    
+    var imgUrls = ["", "", "", ""];
     for (var i = 1; i <= 4; i++) {
       var base64Key = "GAMBAR_" + i;
       if (data[base64Key] && data[base64Key].indexOf("data:image") > -1) {
@@ -460,7 +469,7 @@ function doPost(e) {
       imgUrls[3]
     ]);
 
-    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+    return ContentService.createTextOutput(JSON.stringify({status: "success", pdfUrl: pdfUrl}))
       .setMimeType(ContentService.MimeType.JSON);
   } catch(error) {
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: error.toString()}))
@@ -648,12 +657,12 @@ function doPost(e) {
 
     <!-- JS Core Logic -->
     <script>
-        // Data Store (Local Cache)
+        // Penyimpan Data (Local Cache)
         let reports = [];
         let pChart = null;
         let sChart = null;
 
-        // Initialize App on load
+        // Inisialisasi Aplikasi ketika halaman dimuat
         window.onload = function() {
             loadLocalData();
             initCharts();
@@ -661,13 +670,13 @@ function doPost(e) {
             loadAppsScriptSetting();
         };
 
-        // Load data from LocalStorage
+        // Membaca data dari LocalStorage
         function loadLocalData() {
             const data = localStorage.getItem('kkbs_laporan_data');
             if (data) {
                 reports = JSON.parse(data);
             } else {
-                // Seed Mock Data if empty
+                // Seed Mock Data jika kosong
                 reports = [
                     {
                         id: "1",
@@ -706,12 +715,12 @@ function doPost(e) {
             }
         }
 
-        // Save to LocalStorage
+        // Menyimpan data ke LocalStorage
         function saveToLocalStorage() {
             localStorage.setItem('kkbs_laporan_data', JSON.stringify(reports));
         }
 
-        // Load Apps Script API Url
+        // Membaca tetapan URL Apps Script
         function loadAppsScriptSetting() {
             const url = localStorage.getItem('kkbs_apps_script_url');
             if (url) {
@@ -724,7 +733,7 @@ function doPost(e) {
             }
         }
 
-        // Save Apps Script Setting
+        // Menyimpan tetapan URL Apps Script
         function saveAppsScriptUrl() {
             const url = document.getElementById('apps-script-url').value.trim();
             if (url) {
@@ -742,16 +751,16 @@ function doPost(e) {
             }
         }
 
-        // Navigation tab switching
+        // Fungsi pertukaran tab navigasi
         function switchTab(tabId) {
-            // Hide all tabs
+            // Sembunyikan semua tab
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.add('hidden');
             });
-            // Show active tab
+            // Tampilkan tab aktif
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
-            // Set nav styles
+            // Tetapan gaya navigasi aktif
             document.querySelectorAll('nav button').forEach(btn => {
                 btn.classList.remove('active-nav');
             });
@@ -765,24 +774,24 @@ function doPost(e) {
             }
         }
 
-        // Render Dashboard Statistics & Lists
+        // Memaparkan statistik dan senarai terbaru pada Dashboard
         function renderDashboard() {
             document.getElementById('stat-total-reports').textContent = reports.length;
             
             const totalParticipants = reports.reduce((acc, curr) => acc + Number(curr.BIL_PESERTA || 0), 0);
             document.getElementById('stat-total-participants').textContent = totalParticipants;
 
-            // Month calculation (Current June 2026 context)
+            // Pengiraan bulan ini (Konteks semasa Jun 2026)
             const currentMonthReports = reports.filter(r => {
                 const date = new Date(r.TARIKH);
-                return date.getMonth() === 5 && date.getFullYear() === 2026; // June
+                return date.getMonth() === 5 && date.getFullYear() === 2026; // Jun
             }).length;
             document.getElementById('stat-month-reports').textContent = currentMonthReports;
 
             const avg = reports.length > 0 ? Math.round(totalParticipants / reports.length) : 0;
             document.getElementById('stat-avg-participants').textContent = avg;
 
-            // Render Recent List (Max 3)
+            // Papar Senarai Terkini (Maksimum 3)
             const recentContainer = document.getElementById('dashboard-recent-list');
             if (reports.length === 0) {
                 recentContainer.innerHTML = `
@@ -804,21 +813,24 @@ function doPost(e) {
                         <div class="p-2 bg-emerald-50 rounded-xl text-primary-700">
                             <i class="fa-solid fa-file-pdf text-base"></i>
                         </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-800 line-clamp-1">${item.NAMA_AKTIVITI}</h4>
-                            <div class="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-xs font-bold text-slate-800 truncate">${item.NAMA_AKTIVITI}</h4>
+                            <div class="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5 truncate">
                                 <span><i class="fa-regular fa-calendar mr-1"></i>${formatDate(item.TARIKH)}</span>
                                 <span>&bull;</span>
                                 <span><i class="fa-solid fa-location-dot mr-1"></i>${item.TEMPAT}</span>
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-1.5">
+                    <div class="flex items-center space-x-1 flex-shrink-0">
                         <button onclick="downloadReportPDF('${item.id}')" class="p-2 text-slate-500 hover:text-red-600 transition" title="Muat Turun PDF">
-                            <i class="fa-solid fa-download"></i>
+                            <i class="fa-solid fa-download text-sm"></i>
                         </button>
                         <button onclick="editReport('${item.id}')" class="p-2 text-slate-500 hover:text-primary-600 transition" title="Edit Laporan">
-                            <i class="fa-solid fa-pen-to-square"></i>
+                            <i class="fa-solid fa-pen-to-square text-sm"></i>
+                        </button>
+                        <button onclick="deleteReport('${item.id}')" class="p-2 text-slate-500 hover:text-rose-600 transition" title="Padam Laporan">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
                     </div>
                 `;
@@ -826,7 +838,7 @@ function doPost(e) {
             });
         }
 
-        // Render full Reports List (Tab 3)
+        // Memaparkan keseluruhan Senarai Laporan (Tab 3)
         function renderReportsList() {
             const container = document.getElementById('reports-list-container');
             container.innerHTML = '';
@@ -884,7 +896,7 @@ function doPost(e) {
             });
         }
 
-        // Filter search input
+        // Tapis input carian
         function filterReports() {
             const query = document.getElementById('search-input').value.toLowerCase();
             const cards = document.querySelectorAll('#reports-list-container > div');
@@ -906,74 +918,156 @@ function doPost(e) {
             });
         }
 
-        // Handle Form Submit
+        // Mengendalikan Penghantaran Borang (Form Submit)
         function handleFormSubmit(e) {
             e.preventDefault();
 
             const reportId = document.getElementById('report-id').value;
             const isEdit = reportId !== "";
 
-            const payload = {
-                id: isEdit ? reportId : Date.now().toString(),
-                NAMA_AKTIVITI: document.getElementById('NAMA_AKTIVITI').value,
-                TARIKH: document.getElementById('TARIKH').value,
-                MASA: document.getElementById('MASA').value,
-                TEMPAT: document.getElementById('TEMPAT').value,
-                SASARAN: document.getElementById('SASARAN').value,
-                BIL_PESERTA: Number(document.getElementById('BIL_PESERTA').value),
-                ANGGOTA_TERLIBAT: document.getElementById('ANGGOTA_TERLIBAT').value,
-                OBJEKTIF: document.getElementById('OBJEKTIF').value,
-                PELAKSANAAN: document.getElementById('PELAKSANAAN').value,
-                PENCAPAIAN: document.getElementById('PENCAPAIAN').value,
-                ISU: document.getElementById('ISU').value,
-                PENAMBAHBAIKAN: document.getElementById('PENAMBAHBAIKAN').value,
-                GAMBAR_1: document.getElementById('GAMBAR_1_store').value || "",
-                GAMBAR_2: document.getElementById('GAMBAR_2_store').value || "",
-                GAMBAR_3: document.getElementById('GAMBAR_3_store').value || "",
-                GAMBAR_4: document.getElementById('GAMBAR_4_store').value || ""
+            showToast("Menjana laporan dan memproses fail PDF...", "info");
+
+            const id = isEdit ? reportId : Date.now().toString();
+            const NAMA_AKTIVITI = document.getElementById('NAMA_AKTIVITI').value;
+            const TARIKH = document.getElementById('TARIKH').value;
+            const MASA = document.getElementById('MASA').value;
+            const TEMPAT = document.getElementById('TEMPAT').value;
+            const SASARAN = document.getElementById('SASARAN').value;
+            const BIL_PESERTA = Number(document.getElementById('BIL_PESERTA').value);
+            const ANGGOTA_TERLIBAT = document.getElementById('ANGGOTA_TERLIBAT').value;
+            const OBJEKTIF = document.getElementById('OBJEKTIF').value;
+            const PELAKSANAAN = document.getElementById('PELAKSANAAN').value;
+            const PENCAPAIAN = document.getElementById('PENCAPAIAN').value;
+            const ISU = document.getElementById('ISU').value;
+            const PENAMBAHBAIKAN = document.getElementById('PENAMBAHBAIKAN').value;
+            const GAMBAR_1 = document.getElementById('GAMBAR_1_store').value || "";
+            const GAMBAR_2 = document.getElementById('GAMBAR_2_store').value || "";
+            const GAMBAR_3 = document.getElementById('GAMBAR_3_store').value || "";
+            const GAMBAR_4 = document.getElementById('GAMBAR_4_store').value || "";
+
+            // Isi nilai di dalam templat PDF terlebih dahulu bagi penjanaan base64
+            document.getElementById('pdf-nama').textContent = NAMA_AKTIVITI;
+            document.getElementById('pdf-tarikh-masa').textContent = `${formatDate(TARIKH)} / ${MASA}`;
+            document.getElementById('pdf-tempat').textContent = TEMPAT;
+            document.getElementById('pdf-sasaran-peserta').textContent = `${SASARAN} (${BIL_PESERTA} Orang)`;
+            document.getElementById('pdf-anggota').textContent = ANGGOTA_TERLIBAT;
+            
+            document.getElementById('pdf-objektif').innerHTML = OBJEKTIF.replace(/\n/g, '<br>');
+            document.getElementById('pdf-pelaksanaan').innerHTML = PELAKSANAAN.replace(/\n/g, '<br>');
+            document.getElementById('pdf-pencapaian').innerHTML = PENCAPAIAN.replace(/\n/g, '<br>');
+            document.getElementById('pdf-isu').innerHTML = (ISU || "Tiada isu/kekangan yang dilaporkan.").replace(/\n/g, '<br>');
+            document.getElementById('pdf-penambahbaikan').innerHTML = (PENAMBAHBAIKAN || "Tiada cadangan penambahbaikan.").replace(/\n/g, '<br>');
+
+            // Lampiran Gambar
+            let hasAnyImage = false;
+            const TRANSPARENT_GIF = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            
+            for (let i = 1; i <= 4; i++) {
+                const imgEl = document.getElementById(`pdf-img-${i}`);
+                const containerEl = document.getElementById(`pdf-img-container-${i}`);
+                const currentImgData = i === 1 ? GAMBAR_1 : i === 2 ? GAMBAR_2 : i === 3 ? GAMBAR_3 : GAMBAR_4;
+                if (currentImgData) {
+                    imgEl.src = currentImgData;
+                    containerEl.classList.remove('hidden');
+                    hasAnyImage = true;
+                } else {
+                    imgEl.src = TRANSPARENT_GIF;
+                    containerEl.classList.add('hidden');
+                }
+            }
+
+            const lampiranSection = document.getElementById('pdf-lampiran-section');
+            if (hasAnyImage) {
+                lampiranSection.classList.remove('hidden');
+            } else {
+                lampiranSection.classList.add('hidden');
+            }
+
+            // Jana PDF sebagai Base64
+            const element = document.getElementById('pdf-template');
+            element.classList.remove('hidden'); // Papar sementara untuk render
+
+            const opt = {
+                margin:       0,
+                image:        { type: 'jpeg', quality: 0.95 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            if (isEdit) {
-                const idx = reports.findIndex(r => r.id === reportId);
-                if (idx > -1) reports[idx] = payload;
-                showToast("Laporan berjaya dikemas kini!", "success");
-            } else {
-                reports.push(payload);
-                showToast("Laporan baharu berjaya disimpan!", "success");
-            }
+            html2pdf().set(opt).from(element).output('datauristring').then(pdfBase64 => {
+                element.classList.add('hidden'); // Sembunyikan semula
 
-            saveToLocalStorage();
-            
-            // Sync to Google Sheets if API URL set
-            const apiUrl = localStorage.getItem('kkbs_apps_script_url');
-            if (apiUrl) {
-                syncWithGoogleSheets(apiUrl, payload);
-            }
+                const payload = {
+                    id: id,
+                    NAMA_AKTIVITI,
+                    TARIKH,
+                    MASA,
+                    TEMPAT,
+                    SASARAN,
+                    BIL_PESERTA,
+                    ANGGOTA_TERLIBAT,
+                    OBJEKTIF,
+                    PELAKSANAAN,
+                    PENCAPAIAN,
+                    ISU,
+                    PENAMBAHBAIKAN,
+                    GAMBAR_1,
+                    GAMBAR_2,
+                    GAMBAR_3,
+                    GAMBAR_4,
+                    PDF_BASE64: pdfBase64 // Hantar janaan PDF base64 ke Google Apps Script
+                };
 
-            clearForm();
-            switchTab('dashboard');
+                if (isEdit) {
+                    const idx = reports.findIndex(r => r.id === id);
+                    if (idx > -1) reports[idx] = payload;
+                    showToast("Laporan berjaya dikemas kini!", "success");
+                } else {
+                    reports.push(payload);
+                    showToast("Laporan baharu berjaya disimpan!", "success");
+                }
+
+                saveToLocalStorage();
+                
+                // Hantar ke Google Sheets & Drive jika API dikonfigurasi
+                const apiUrl = localStorage.getItem('kkbs_apps_script_url');
+                if (apiUrl) {
+                    syncWithGoogleSheets(apiUrl, payload);
+                } else {
+                    showToast("Tersimpan secara lokal. Sambungkan API untuk simpanan awan.", "info");
+                }
+
+                clearForm();
+                switchTab('dashboard');
+
+            }).catch(err => {
+                element.classList.add('hidden');
+                console.error(err);
+                showToast("Gagal menghasilkan fail PDF untuk disegerak.", "warning");
+            });
         }
 
-        // Sync via Apps Script
+        // Segerak ke Google Sheets menggunakan Apps Script
         function syncWithGoogleSheets(url, data) {
+            showToast("Menyegerak data ke Google Drive & Sheet...", "info");
             fetch(url, {
                 method: "POST",
-                mode: "no-cors", // Required to bypass CORS restriction for App Script web app redirects
+                mode: "no-cors", // Diperlukan untuk bypass sekatan CORS pada App Script redirects
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(data)
             })
             .then(() => {
-                showToast("Data disegerakkan ke Google Sheets!", "success");
+                showToast("Laporan & PDF berjaya disimpan di Google Sheets & Drive!", "success");
             })
             .catch(err => {
                 console.error(err);
-                showToast("Segerak Google Sheets gagal, disimpan secara tempatan sahaja.", "warning");
+                showToast("Penyegerakan Google gagal, data disimpan secara tempatan.", "warning");
             });
         }
 
-        // Previews of Image uploads & compress slightly
+        // Pratonton imej yang dimuat naik
         function previewImage(input, previewId, storeId) {
             const file = input.files[0];
             if (!file) return;
@@ -981,10 +1075,9 @@ function doPost(e) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const imgBase64 = e.target.result;
-                // Store base64 in hidden input
                 document.getElementById(storeId).value = imgBase64;
                 
-                // Show thumbnail preview
+                // Tampilkan pratonton kecil
                 const prevDiv = document.getElementById(previewId);
                 prevDiv.innerHTML = `
                     <div class="relative w-full h-full">
@@ -998,7 +1091,7 @@ function doPost(e) {
             reader.readAsDataURL(file);
         }
 
-        // Delete Image
+        // Hapus pratonton gambar
         function removeImage(previewId, storeId, inputId) {
             document.getElementById(storeId).value = "";
             document.getElementById(inputId).value = "";
@@ -1010,7 +1103,7 @@ function doPost(e) {
             `;
         }
 
-        // Edit Report Action
+        // Tindakan Edit Laporan
         function editReport(id) {
             const report = reports.find(r => r.id === id);
             if (!report) return;
@@ -1029,7 +1122,7 @@ function doPost(e) {
             document.getElementById('ISU').value = report.ISU;
             document.getElementById('PENAMBAHBAIKAN').value = report.PENAMBAHBAIKAN;
 
-            // Load saved image values
+            // Muatkan imej yang tersimpan
             for (let i = 1; i <= 4; i++) {
                 const imgData = report[`GAMBAR_${i}`];
                 const store = document.getElementById(`GAMBAR_${i}_store`);
@@ -1060,26 +1153,27 @@ function doPost(e) {
             switchTab('form');
         }
 
-        // Delete Report Action
+        // Tindakan Padam Laporan
         function deleteReport(id) {
-            // Replaces browser confirm
             const consent = confirm("Adakah anda pasti mahu memadamkan laporan ini?");
             if (consent) {
                 reports = reports.filter(r => r.id !== id);
                 saveToLocalStorage();
                 renderReportsList();
+                renderDashboard();
+                updateCharts();
                 showToast("Laporan telah dipadamkan", "info");
             }
         }
 
-        // Clear Form inputs
+        // Reset Borang
         function clearForm() {
             document.getElementById('activity-form').reset();
             document.getElementById('report-id').value = "";
             document.getElementById('form-title-mode').textContent = "Borang Laporan Aktiviti Baharu";
             document.getElementById('btn-submit').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Simpan Laporan & Segerak</span>`;
             
-            // Clear image previews
+            // Padam pratonton gambar
             for (let i = 1; i <= 4; i++) {
                 document.getElementById(`GAMBAR_${i}_store`).value = "";
                 document.getElementById(`GAMBAR_${i}_prev`).innerHTML = `
@@ -1090,14 +1184,14 @@ function doPost(e) {
             }
         }
 
-        // Generate and Download PDF using html2pdf
+        // Manual Muat Turun PDF Laporan
         function downloadReportPDF(id) {
             const report = reports.find(r => r.id === id);
             if (!report) return;
 
             showToast("Menjana dokumen PDF...", "info");
 
-            // Fill hidden template
+            // Isikan templat PDF
             document.getElementById('pdf-nama').textContent = report.NAMA_AKTIVITI;
             document.getElementById('pdf-tarikh-masa').textContent = `${formatDate(report.TARIKH)} / ${report.MASA}`;
             document.getElementById('pdf-tempat').textContent = report.TEMPAT;
@@ -1110,7 +1204,7 @@ function doPost(e) {
             document.getElementById('pdf-isu').innerHTML = (report.ISU || "Tiada isu/kekangan yang dilaporkan.").replace(/\n/g, '<br>');
             document.getElementById('pdf-penambahbaikan').innerHTML = (report.PENAMBAHBAIKAN || "Tiada cadangan penambahbaikan.").replace(/\n/g, '<br>');
 
-            // Assign Images & Handle Container Visibility to prevent console warnings
+            // Assign Gambar
             let hasAnyImage = false;
             const TRANSPARENT_GIF = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             
@@ -1127,7 +1221,6 @@ function doPost(e) {
                 }
             }
 
-            // Hide or show the whole Attachment Section dynamically
             const lampiranSection = document.getElementById('pdf-lampiran-section');
             if (hasAnyImage) {
                 lampiranSection.classList.remove('hidden');
@@ -1135,9 +1228,8 @@ function doPost(e) {
                 lampiranSection.classList.add('hidden');
             }
 
-            // Options for html2pdf - FIXED FOR MARGIN CUT-OFFS (0 margin with box-sizing on elements)
             const opt = {
-                margin:       0, // Zero outer margin. The template handles margin precisely via inner padding
+                margin:       0,
                 filename:     `Laporan_KelabWargaEmas_KKBS_${report.TARIKH}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
@@ -1145,10 +1237,10 @@ function doPost(e) {
             };
 
             const element = document.getElementById('pdf-template');
-            element.classList.remove('hidden'); // momentarily display for rendering
+            element.classList.remove('hidden'); // Papar sementara untuk render
 
             html2pdf().set(opt).from(element).save().then(() => {
-                element.classList.add('hidden'); // hide again after render
+                element.classList.add('hidden'); // Sembunyikan semula
                 showToast("PDF berjaya dimuat turun!", "success");
             }).catch(err => {
                 element.classList.add('hidden');
@@ -1159,7 +1251,6 @@ function doPost(e) {
 
         // Chart.js Visualizations
         function initCharts() {
-            // Chart 1: Trend Kehadiran
             const ctx1 = document.getElementById('participantsChart').getContext('2d');
             pChart = new Chart(ctx1, {
                 type: 'line',
@@ -1186,7 +1277,6 @@ function doPost(e) {
                 }
             });
 
-            // Chart 2: Kategori Sasaran
             const ctx2 = document.getElementById('sasaranChart').getContext('2d');
             sChart = new Chart(ctx2, {
                 type: 'doughnut',
@@ -1212,7 +1302,6 @@ function doPost(e) {
         function updateCharts() {
             if (!pChart || !sChart) return;
 
-            // Prepare Data for Chart 1 (Last 5 activities chronological)
             const sorted = [...reports].sort((a, b) => new Date(a.TARIKH) - new Date(b.TARIKH));
             const recentStats = sorted.slice(-5);
             
@@ -1220,7 +1309,6 @@ function doPost(e) {
             pChart.data.datasets[0].data = recentStats.map(r => r.BIL_PESERTA);
             pChart.update();
 
-            // Prepare Data for Chart 2
             const sasaranCounts = {};
             reports.forEach(r => {
                 sasaranCounts[r.SASARAN] = (sasaranCounts[r.SASARAN] || 0) + 1;
@@ -1231,7 +1319,7 @@ function doPost(e) {
             sChart.update();
         }
 
-        // Helper: Format Date
+        // Pembantu: Format Tarikh ke DD/MM/YYYY
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const parts = dateStr.split('-');
@@ -1241,7 +1329,7 @@ function doPost(e) {
             return dateStr;
         }
 
-        // Custom Toast Box
+        // Paparan Notifikasi Toast (Menggantikan Alert)
         function showToast(message, type = "success") {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toast-icon');
@@ -1266,7 +1354,7 @@ function doPost(e) {
             }, 3000);
         }
 
-        // Copy Code utility
+        // Salin kod Apps Script
         function copyCode() {
             const code = document.getElementById('code-snippet').innerText;
             const temp = document.createElement('textarea');
