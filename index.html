@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="ms" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pelaporan Kelab Warga Emas KKBS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2pdf.js for High Quality PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        hospital: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar for desktop */
+        @media (min-width: 768px) {
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #f1f5f9;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+        }
+        .active-nav {
+            background-color: #dcfce7;
+            color: #15803d;
+            font-weight: 600;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* CSS Khusus untuk Paparan Cetakan PDF */
+        #pdf-template {
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+            padding: 20mm 20mm 15mm 20mm; /* Atas, Kanan, Bawah, Kiri - Standard Margin Dokumen Rasmi */
+            background-color: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+        }
+        #pdf-template * {
+            box-sizing: border-box;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        #pdf-template table {
+            width: 100% !important;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+        #pdf-template td {
+            word-wrap: break-word;
+            white-space: normal !important;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden text-slate-800">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-gradient-to-r from-primary-800 to-primary-700 text-white shadow-md flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white p-2 rounded-full shadow-inner flex items-center justify-center w-10 h-10">
+                    <i class="fa-solid fa-hospital-user text-primary-700 text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xs font-bold tracking-wider uppercase text-emerald-200">Klinik Kesihatan Bagan Serai</h1>
+                    <h2 class="text-sm font-extrabold leading-tight">Kelab Warga Emas (e-Laporan)</h2>
+                </div>
+            </div>
+            <!-- Sync Indicator Indicator -->
+            <div class="flex items-center space-x-2">
+                <span id="sync-status-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/50 text-emerald-200 border border-emerald-500/30">
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-1.5 animate-pulse"></span>
+                    Mod Tempatan
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto pb-24 md:pb-6 focus:outline-none">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+
+            <!-- Tab 1: Dashboard View -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <!-- Welcome & Stats Header -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <span class="text-xs text-slate-500 font-medium">Jumlah Laporan</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="stat-total-reports" class="text-2xl font-bold text-slate-900">0</span>
+                            <span class="p-1.5 bg-primary-50 rounded-lg text-primary-600"><i class="fa-solid fa-file-invoice"></i></span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <span class="text-xs text-slate-500 font-medium">Jumlah Peserta</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="stat-total-participants" class="text-2xl font-bold text-slate-900">0</span>
+                            <span class="p-1.5 bg-blue-50 rounded-lg text-blue-600"><i class="fa-solid fa-users"></i></span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <span class="text-xs text-slate-500 font-medium">Bulan Ini</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="stat-month-reports" class="text-2xl font-bold text-slate-900">0</span>
+                            <span class="p-1.5 bg-purple-50 rounded-lg text-purple-600"><i class="fa-solid fa-calendar-check"></i></span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <span class="text-xs text-slate-500 font-medium">Sasaran Purata</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="stat-avg-participants" class="text-2xl font-bold text-slate-900">0</span>
+                            <span class="p-1.5 bg-amber-50 rounded-lg text-amber-600"><i class="fa-solid fa-chart-line"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-4"><i class="fa-solid fa-chart-bar text-primary-600 mr-2"></i>Trend Kehadiran Peserta</h3>
+                        <div class="h-64 relative">
+                            <canvas id="participantsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-4"><i class="fa-solid fa-chart-pie text-hospital-600 mr-2"></i>Kategori Sasaran Aktiviti</h3>
+                        <div class="h-64 relative">
+                            <canvas id="sasaranChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions & Status -->
+                <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-center sm:text-left">
+                        <h4 class="font-bold text-emerald-900 text-base">Sedia untuk menambah laporan baharu?</h4>
+                        <p class="text-xs text-emerald-700 mt-1">Laporan boleh dijanakan terus ke format PDF rasmi dan disokong oleh fungsi storan automatik.</p>
+                    </div>
+                    <button onclick="switchTab('form')" class="w-full sm:w-auto px-5 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2 text-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Tambah Laporan Baharu</span>
+                    </button>
+                </div>
+
+                <!-- Aktiviti Terkini -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-clock-rotate-left text-slate-500 mr-2"></i>Pelaporan Terkini</h3>
+                        <button onclick="switchTab('list')" class="text-xs font-semibold text-primary-600 hover:text-primary-700">Lihat Semua</button>
+                    </div>
+                    <div id="dashboard-recent-list" class="divide-y divide-slate-100">
+                        <!-- Dynamic injection of recent reports -->
+                        <div class="py-8 text-center text-slate-400 text-sm">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                            Tiada rekod pelaporan disimpan lagi.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Borang Pelaporan View -->
+            <div id="tab-form" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-primary-700 to-primary-600 p-4 text-white flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <h3 class="font-bold text-sm" id="form-title-mode">Borang Laporan Aktiviti Baharu</h3>
+                        </div>
+                        <button onclick="clearForm()" class="text-xs bg-white/20 hover:bg-white/30 px-2.5 py-1.5 rounded-lg font-semibold transition">
+                            Reset Borang
+                        </button>
+                    </div>
+
+                    <form id="activity-form" class="p-5 md:p-6 space-y-6" onsubmit="handleFormSubmit(event)">
+                        <input type="hidden" id="report-id" value="">
+                        
+                        <!-- Section A: Maklumat Asas -->
+                        <div class="space-y-4">
+                            <div class="border-l-4 border-primary-500 pl-3">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-primary-700">A. Maklumat Asas Program</h4>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Aktiviti <span class="text-red-500">*</span></label>
+                                    <input type="text" id="NAMA_AKTIVITI" required placeholder="Contoh: Senamrobik & Pemeriksaan Kesihatan" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Sasaran <span class="text-red-500">*</span></label>
+                                    <input type="text" id="SASARAN" required placeholder="Contoh: Warga Emas KKBS / Komuniti" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tarikh <span class="text-red-500">*</span></label>
+                                    <input type="date" id="TARIKH" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Masa <span class="text-red-500">*</span></label>
+                                    <input type="text" id="MASA" required placeholder="Contoh: 8.30 Pagi - 11.00 Pagi" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tempat <span class="text-red-500">*</span></label>
+                                    <input type="text" id="TEMPAT" required placeholder="Contoh: Dewan Komuniti Bagan Serai" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Bilangan Peserta <span class="text-red-500">*</span></label>
+                                    <input type="number" id="BIL_PESERTA" required placeholder="Contoh: 35" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Anggota Terlibat (Kakitangan) <span class="text-red-500">*</span></label>
+                                <textarea id="ANGGOTA_TERLIBAT" required rows="2" placeholder="Contoh: Dr. Halim (Pegawai Perubatan), JM Normah, PPK Roslan" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Section B: Perincian Aktiviti -->
+                        <div class="space-y-4 pt-4 border-t border-slate-100">
+                            <div class="border-l-4 border-primary-500 pl-3">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-primary-700">B. Perincian Laporan Aktiviti</h4>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Objektif Aktiviti <span class="text-red-500">*</span></label>
+                                    <textarea id="OBJEKTIF" required rows="4" placeholder="Nyatakan objektif program dijalankan..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pelaksanaan Aktiviti <span class="text-red-500">*</span></label>
+                                    <textarea id="PELAKSANAAN" required rows="4" placeholder="Terangkan perjalanan atur cara atau aliran aktiviti..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pencapaian / Output <span class="text-red-500">*</span></label>
+                                    <textarea id="PENCAPAIAN" required rows="3" placeholder="Contoh: Semua peserta berjaya disaring, 5 orang dirujuk..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Isu / Kekangan (Jika ada)</label>
+                                    <textarea id="ISU" rows="3" placeholder="Contoh: Kekangan ruang, cuaca hujan..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Penambahbaikan / Cadangan</label>
+                                    <textarea id="PENAMBAHBAIKAN" rows="3" placeholder="Contoh: Mengadakan program di kawasan dewan tertutup..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-sm bg-slate-50/50"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section C: Lampiran Bergambar -->
+                        <div class="space-y-4 pt-4 border-t border-slate-100">
+                            <div class="border-l-4 border-primary-500 pl-3">
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-primary-700">C. Lampiran Bergambar (Maksimum 4 Gambar)</h4>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Sila muat naik gambar aktiviti yang berkaitan untuk dijanakan di dalam PDF laporan rasmi.</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <!-- Gambar 1 -->
+                                <div class="relative border-2 border-dashed border-slate-200 hover:border-primary-500 transition rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 min-h-[140px]">
+                                    <input type="file" id="GAMBAR_1_input" accept="image/*" onchange="previewImage(this, 'GAMBAR_1_prev', 'GAMBAR_1_store')" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <input type="hidden" id="GAMBAR_1_store">
+                                    <div id="GAMBAR_1_prev" class="w-full h-full flex flex-col items-center justify-center">
+                                        <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                                        <span class="text-[11px] font-semibold text-slate-500">Gambar 1</span>
+                                        <span class="text-[9px] text-slate-400">Pilih Fail</span>
+                                    </div>
+                                </div>
+
+                                <!-- Gambar 2 -->
+                                <div class="relative border-2 border-dashed border-slate-200 hover:border-primary-500 transition rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 min-h-[140px]">
+                                    <input type="file" id="GAMBAR_2_input" accept="image/*" onchange="previewImage(this, 'GAMBAR_2_prev', 'GAMBAR_2_store')" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <input type="hidden" id="GAMBAR_2_store">
+                                    <div id="GAMBAR_2_prev" class="w-full h-full flex flex-col items-center justify-center">
+                                        <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                                        <span class="text-[11px] font-semibold text-slate-500">Gambar 2</span>
+                                        <span class="text-[9px] text-slate-400">Pilih Fail</span>
+                                    </div>
+                                </div>
+
+                                <!-- Gambar 3 -->
+                                <div class="relative border-2 border-dashed border-slate-200 hover:border-primary-500 transition rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 min-h-[140px]">
+                                    <input type="file" id="GAMBAR_3_input" accept="image/*" onchange="previewImage(this, 'GAMBAR_3_prev', 'GAMBAR_3_store')" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <input type="hidden" id="GAMBAR_3_store">
+                                    <div id="GAMBAR_3_prev" class="w-full h-full flex flex-col items-center justify-center">
+                                        <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                                        <span class="text-[11px] font-semibold text-slate-500">Gambar 3</span>
+                                        <span class="text-[9px] text-slate-400">Pilih Fail</span>
+                                    </div>
+                                </div>
+
+                                <!-- Gambar 4 -->
+                                <div class="relative border-2 border-dashed border-slate-200 hover:border-primary-500 transition rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50 min-h-[140px]">
+                                    <input type="file" id="GAMBAR_4_input" accept="image/*" onchange="previewImage(this, 'GAMBAR_4_prev', 'GAMBAR_4_store')" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <input type="hidden" id="GAMBAR_4_store">
+                                    <div id="GAMBAR_4_prev" class="w-full h-full flex flex-col items-center justify-center">
+                                        <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                                        <span class="text-[11px] font-semibold text-slate-500">Gambar 4</span>
+                                        <span class="text-[9px] text-slate-400">Pilih Fail</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="pt-4 flex flex-col sm:flex-row items-center justify-end gap-3">
+                            <button type="button" onclick="switchTab('dashboard')" class="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition">
+                                Batal
+                            </button>
+                            <button type="submit" id="btn-submit" class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md transition flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Simpan Laporan & Segerak</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab 3: Senarai Laporan View -->
+            <div id="tab-list" class="tab-content hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center"><i class="fa-solid fa-list-check text-primary-600 mr-2"></i>Senarai Laporan Aktiviti</h3>
+                    <!-- Search bar -->
+                    <div class="relative w-full sm:w-72">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="search-input" oninput="filterReports()" placeholder="Cari aktiviti, tempat, sasaran..." class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-xs">
+                    </div>
+                </div>
+
+                <div id="reports-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic reports inject here -->
+                </div>
+            </div>
+
+            <!-- Tab 4: Integrasi Google Sheet & Drive -->
+            <div id="tab-integration" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <div class="border-l-4 border-primary-500 pl-3">
+                        <h3 class="text-base font-bold text-slate-800">Panduan Integrasi Google Sheets & Drive</h3>
+                        <p class="text-xs text-slate-500">Sambungkan Dashboard ini terus ke Google Sheets & Drive yang telah anda sediakan di Bagan Serai.</p>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 space-y-2">
+                        <p class="font-semibold"><i class="fa-solid fa-circle-info mr-1"></i> Mengapa Integrasi Diperlukan?</p>
+                        <p>Penyemak imbas web (browser) tidak dibenarkan menyimpan data terus ke Google Sheets / Drive atas faktor keselamatan secara langsung. Kita perlu menggunakan <strong>Google Apps Script</strong> sebagai jambatan (API Webhook) yang menyokong penghantaran data tanpa pelayan tambahan.</p>
+                    </div>
+
+                    <!-- Setup Form -->
+                    <div class="space-y-3 pt-2">
+                        <label class="block text-xs font-bold text-slate-700">Langkah 1: Masukkan URL Apps Script Anda (Jika Ada)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="apps-script-url" placeholder="https://script.google.com/macros/s/..." class="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-xs">
+                            <button onclick="saveAppsScriptUrl()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition">Simpan API</button>
+                        </div>
+                        <p class="text-[10px] text-slate-500">Data anda akan dihantar ke URL ini setiap kali anda klik "Simpan Laporan". Jika dibiarkan kosong, ia menggunakan storan tempatan (Local Storage).</p>
+                    </div>
+
+                    <!-- Step-by-Step Code -->
+                    <div class="space-y-3 pt-4 border-t border-slate-100">
+                        <h4 class="text-xs font-bold text-slate-800">Langkah 2: Salin Kod Google Apps Script di bawah:</h4>
+                        <div class="relative">
+                            <pre class="bg-slate-900 text-slate-200 p-4 rounded-xl text-[11px] overflow-x-auto font-mono max-h-60 hide-scrollbar" id="code-snippet">
+/* KOD GOOGLE APPS SCRIPT UNTUK INTEGRASI
+Sila paste kod ini di Extension > Apps Script di Google Sheet anda.
+*/
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.openById("1ReX5B40-6twj1K2mWnUT7wNpKEuVFQC-EHqmr-6wkOw").getActiveSheet();
+    
+    // Simpan gambar ke Google Drive Folder (jika ada data gambar base64)
+    // Folder Laporan PDF: 1CleTztYyzLrsOvhU36oeEMP2ybJpyaAf
+    // Folder Gambar: 1YsM-gEFzGlcZzRPTcjIoLezpn5Kvd9rD
+    var folderGambarId = "1YsM-gEFzGlcZzRPTcjIoLezpn5Kvd9rD";
+    var imgUrls = ["", "", "", ""];
+    
+    for (var i = 1; i <= 4; i++) {
+      var base64Key = "GAMBAR_" + i;
+      if (data[base64Key] && data[base64Key].indexOf("data:image") > -1) {
+        var cleanData = data[base64Key].split(",")[1];
+        var contentType = data[base64Key].split(";")[0].split(":")[1];
+        var blob = Utilities.newBlob(Utilities.base64Decode(cleanData), contentType, data.NAMA_AKTIVITI + "_Img" + i + ".png");
+        var file = DriveApp.getFolderById(folderGambarId).createFile(blob);
+        imgUrls[i-1] = file.getUrl();
+      }
+    }
+
+    sheet.appendRow([
+      data.NAMA_AKTIVITI,
+      data.TARIKH,
+      data.MASA,
+      data.TEMPAT,
+      data.SASARAN,
+      data.BIL_PESERTA,
+      data.ANGGOTA_TERLIBAT,
+      data.OBJEKTIF,
+      data.PELAKSANAAN,
+      data.PENCAPAIAN,
+      data.ISU,
+      data.PENAMBAHBAIKAN,
+      imgUrls[0],
+      imgUrls[1],
+      imgUrls[2],
+      imgUrls[3]
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                            <button onclick="copyCode()" class="absolute top-2 right-2 px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-semibold transition">Salin Kod</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile Friendly) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50 flex-shrink-0">
+        <div class="max-w-md mx-auto px-4 py-2 flex items-center justify-around">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-slate-500 hover:text-primary-600 transition duration-150 active-nav">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Dashboard</span>
+            </button>
+            <button onclick="switchTab('form')" id="nav-form" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-slate-500 hover:text-primary-600 transition duration-150">
+                <i class="fa-solid fa-circle-plus text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Borang</span>
+            </button>
+            <button onclick="switchTab('list')" id="nav-list" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-slate-500 hover:text-primary-600 transition duration-150">
+                <i class="fa-solid fa-folder-open text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Laporan</span>
+            </button>
+            <button onclick="switchTab('integration')" id="nav-integration" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-slate-500 hover:text-primary-600 transition duration-150">
+                <i class="fa-solid fa-cloud text-lg"></i>
+                <span class="text-[10px] mt-1 font-medium">Integrasi</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Toast Notification Message (Replaces Alerts) -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 transition duration-300 opacity-0 pointer-events-none">
+        <span id="toast-icon" class="text-emerald-400"><i class="fa-solid fa-circle-check"></i></span>
+        <span id="toast-message" class="font-medium">Mesej berjaya dihantar!</span>
+    </div>
+
+    <!-- INVISIBLE TEMPLATE FOR PDF EXPORT -->
+    <!-- Mimicking clinical report structure, fully constrained to 210mm with precise margins -->
+    <div id="pdf-template" class="hidden">
+        <div class="text-center pb-4 border-b-2 border-black">
+            <h1 class="text-lg font-bold uppercase" style="font-size: 14pt; letter-spacing: 0.5px; margin: 0;">KLINIK KESIHATAN BAGAN SERAI</h1>
+            <h2 class="text-md font-semibold uppercase mt-1" style="font-size: 11pt; color: #333; margin: 0;">LAPORAN AKTIVITI KELAB WARGA EMAS</h2>
+        </div>
+
+        <div class="mt-6 space-y-5">
+            <!-- Table Info -->
+            <table class="w-full border-collapse text-xs" style="font-size: 9.5pt;">
+                <tbody>
+                    <tr>
+                        <td class="border border-slate-300 p-2 font-bold bg-slate-50" style="width: 25%;">Nama Aktiviti</td>
+                        <td id="pdf-nama" class="border border-slate-300 p-2" style="width: 75%;"></td>
+                    </tr>
+                    <tr>
+                        <td class="border border-slate-300 p-2 font-bold bg-slate-50">Tarikh / Masa</td>
+                        <td id="pdf-tarikh-masa" class="border border-slate-300 p-2"></td>
+                    </tr>
+                    <tr>
+                        <td class="border border-slate-300 p-2 font-bold bg-slate-50">Tempat</td>
+                        <td id="pdf-tempat" class="border border-slate-300 p-2"></td>
+                    </tr>
+                    <tr>
+                        <td class="border border-slate-300 p-2 font-bold bg-slate-50">Sasaran / Peserta</td>
+                        <td id="pdf-sasaran-peserta" class="border border-slate-300 p-2"></td>
+                    </tr>
+                    <tr>
+                        <td class="border border-slate-300 p-2 font-bold bg-slate-50">Kakitangan Terlibat</td>
+                        <td id="pdf-anggota" class="border border-slate-300 p-2"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Objektif -->
+            <div class="space-y-1">
+                <h3 class="text-xs font-bold uppercase text-slate-800 border-b border-slate-300 pb-0.5" style="font-size: 9.5pt;">1. Objektif</h3>
+                <p id="pdf-objektif" class="text-xs leading-relaxed text-justify" style="font-size: 9.5pt; margin: 0;"></p>
+            </div>
+
+            <!-- Pelaksanaan -->
+            <div class="space-y-1">
+                <h3 class="text-xs font-bold uppercase text-slate-800 border-b border-slate-300 pb-0.5" style="font-size: 9.5pt;">2. Ringkasan Pelaksanaan</h3>
+                <p id="pdf-pelaksanaan" class="text-xs leading-relaxed text-justify" style="font-size: 9.5pt; margin: 0;"></p>
+            </div>
+
+            <!-- Impak & Pencapaian -->
+            <div class="space-y-1">
+                <h3 class="text-xs font-bold uppercase text-slate-800 border-b border-slate-300 pb-0.5" style="font-size: 9.5pt;">3. Pencapaian / Output</h3>
+                <p id="pdf-pencapaian" class="text-xs leading-relaxed text-justify" style="font-size: 9.5pt; margin: 0;"></p>
+            </div>
+
+            <!-- Isu / Kekangan -->
+            <div class="space-y-1">
+                <h3 class="text-xs font-bold uppercase text-slate-800 border-b border-slate-300 pb-0.5" style="font-size: 9.5pt;">4. Isu & Kekangan</h3>
+                <p id="pdf-isu" class="text-xs leading-relaxed text-justify" style="font-size: 9.5pt; margin: 0;"></p>
+            </div>
+
+            <!-- Cadangan Penambahbaikan -->
+            <div class="space-y-1">
+                <h3 class="text-xs font-bold uppercase text-slate-800 border-b border-slate-300 pb-0.5" style="font-size: 9.5pt;">5. Cadangan Penambahbaikan</h3>
+                <p id="pdf-penambahbaikan" class="text-xs leading-relaxed text-justify" style="font-size: 9.5pt; margin: 0;"></p>
+            </div>
+
+            <!-- Lampiran Bergambar (Page Break Force) -->
+            <div id="pdf-lampiran-section" class="pt-6 page-break-before" style="page-break-before: always;">
+                <div class="text-center pb-3 border-b border-slate-300 mb-4">
+                    <h3 class="text-xs font-bold uppercase text-slate-800" style="font-size: 10pt;">LAMPIRAN BERGAMBAR</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div id="pdf-img-container-1" class="text-center space-y-1 border border-slate-200 p-2 rounded hidden" style="background: #fafafa;">
+                        <img id="pdf-img-1" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mx-auto max-h-[160px] object-contain rounded" style="display: block; max-width: 100%;">
+                        <p class="text-[9px] text-slate-500 italic mt-1">Gambar 1</p>
+                    </div>
+                    <div id="pdf-img-container-2" class="text-center space-y-1 border border-slate-200 p-2 rounded hidden" style="background: #fafafa;">
+                        <img id="pdf-img-2" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mx-auto max-h-[160px] object-contain rounded" style="display: block; max-width: 100%;">
+                        <p class="text-[9px] text-slate-500 italic mt-1">Gambar 2</p>
+                    </div>
+                    <div id="pdf-img-container-3" class="text-center space-y-1 border border-slate-200 p-2 rounded hidden" style="background: #fafafa;">
+                        <img id="pdf-img-3" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mx-auto max-h-[160px] object-contain rounded" style="display: block; max-width: 100%;">
+                        <p class="text-[9px] text-slate-500 italic mt-1">Gambar 3</p>
+                    </div>
+                    <div id="pdf-img-container-4" class="text-center space-y-1 border border-slate-200 p-2 rounded hidden" style="background: #fafafa;">
+                        <img id="pdf-img-4" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mx-auto max-h-[160px] object-contain rounded" style="display: block; max-width: 100%;">
+                        <p class="text-[9px] text-slate-500 italic mt-1">Gambar 4</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tandatangan Pengesahan (Mengikuti format image_8dc5d4.png) -->
+            <div class="space-y-8 pt-8 mt-8 text-xs" style="font-size: 9.5pt; font-family: 'Arial', sans-serif; page-break-inside: avoid;">
+                
+                <!-- Bahagian 1: Disediakan oleh -->
+                <div class="grid grid-cols-2 gap-4 items-start">
+                    <div class="space-y-1">
+                        <p style="margin: 0;">Disediakan oleh,</p>
+                        <div style="height: 45px;"></div>
+                        <p class="text-black" style="margin: 0;">...............................................................................</p>
+                        <p class="font-bold" style="margin: 0;"><b>(JK NOOR ADILA BINTI NAIM JEMALI)</b></p>
+                        <p style="margin: 0;">Jururawat Kesihatan U5,</p>
+                        <p style="margin: 0;">Klinik Kesihatan Bagan Serai.</p>
+                    </div>
+                    <div class="text-right pt-1 flex justify-end">
+                        <p class="w-64 text-left" style="margin: 0;">Tarikh: ........................................................</p>
+                    </div>
+                </div>
+
+                <!-- Bahagian 2: Disemak oleh -->
+                <div class="grid grid-cols-2 gap-4 items-start" style="page-break-inside: avoid;">
+                    <div class="space-y-1">
+                        <p style="margin: 0;">Disemak oleh,</p>
+                        <div style="height: 45px;"></div>
+                        <p class="text-black" style="margin: 0;">...............................................................................</p>
+                        <p class="font-bold" style="margin: 0;"><b>(DR. NURAZIDAH BINTI ZAHARUDDIN)</b></p>
+                        <p style="margin: 0;">Pegawai Perubatan UD13,</p>
+                        <p style="margin: 0;">Klinik Kesihatan Bagan Serai.</p>
+                    </div>
+                    <div class="text-right pt-1 flex justify-end">
+                        <p class="w-64 text-left" style="margin: 0;">Tarikh: ........................................................</p>
+                    </div>
+                </div>
+
+                <!-- Bahagian 3: Disahkan oleh -->
+                <div class="grid grid-cols-2 gap-4 items-start" style="page-break-inside: avoid;">
+                    <div class="space-y-1">
+                        <p style="margin: 0;">Disahkan oleh,</p>
+                        <div style="height: 45px;"></div>
+                        <p class="text-black" style="margin: 0;">...............................................................................</p>
+                        <p class="font-bold" style="margin: 0;"><b>(DR. SURIYATI BINTI SARIBAN)</b></p>
+                        <p style="margin: 0;">Pakar Perubatan Keluarga UD15,</p>
+                        <p style="margin: 0;">Klinik Kesihatan Bagan Serai.</p>
+                    </div>
+                    <div class="text-right pt-1 flex justify-end">
+                        <p class="w-64 text-left" style="margin: 0;">Tarikh: ........................................................</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Core Logic -->
+    <script>
+        // Data Store (Local Cache)
+        let reports = [];
+        let pChart = null;
+        let sChart = null;
+
+        // Initialize App on load
+        window.onload = function() {
+            loadLocalData();
+            initCharts();
+            renderDashboard();
+            loadAppsScriptSetting();
+        };
+
+        // Load data from LocalStorage
+        function loadLocalData() {
+            const data = localStorage.getItem('kkbs_laporan_data');
+            if (data) {
+                reports = JSON.parse(data);
+            } else {
+                // Seed Mock Data if empty
+                reports = [
+                    {
+                        id: "1",
+                        NAMA_AKTIVITI: "Program Senam Sehat & Saringan Minda Sihat",
+                        TARIKH: "2026-05-12",
+                        MASA: "8:00 Pagi - 10:30 Pagi",
+                        TEMPAT: "Dewan Warga Emas KK Bagan Serai",
+                        SASARAN: "Warga Emas KKBS",
+                        BIL_PESERTA: 45,
+                        ANGGOTA_TERLIBAT: "Dr. Farhana (Pegawai Perubatan), JM Normala, PPK Khairul",
+                        OBJEKTIF: "1. Meningkatkan kesedaran kesihatan fizikal dan mental.\n2. Mengesan simptom kemurungan atau kecemasan awal dalam kalangan warga emas.",
+                        PELAKSANAAN: "Program dimulakan dengan sesi regangan ringan selama 30 minit. Seterusnya, para peserta dibahagikan kepada kaunter saringan tekanan darah, tahap glukosa serta soal selidik minda sihat.",
+                        PENCAPAIAN: "Seramai 45 warga emas berjaya disaring sepenuhnya. 3 kes dikesan menghidap hipertensi ringan dan dijadualkan ke klinik rawatan semula.",
+                        ISU: "Kekangan ruang kaunter saringan yang agak sempit menyebabkan masa giliran sedikit lama.",
+                        PENAMBAHBAIKAN: "Sesi seterusnya akan dipindahkan ke bahagian dewan utama luar klinik.",
+                        GAMBAR_1: "", GAMBAR_2: "", GAMBAR_3: "", GAMBAR_4: ""
+                    },
+                    {
+                        id: "2",
+                        NAMA_AKTIVITI: "Ceramah Pemakanan Seimbang & Masakan Warga Emas",
+                        TARIKH: "2026-06-05",
+                        MASA: "9:00 Pagi - 12:00 Tengah Hari",
+                        TEMPAT: "Klinik Kesihatan Bagan Serai",
+                        SASARAN: "Komuniti Bagan Serai",
+                        BIL_PESERTA: 32,
+                        ANGGOTA_TERLIBAT: "Pn. Azlin (Pegawai Dietetik), Dr. Farhana",
+                        OBJEKTIF: "Mendedahkan panduan amalan suku-suku separuh yang sesuai dengan warga emas bagi mengawal diabetes.",
+                        PELAKSANAAN: "Syarahan teori mengenai pemakanan sihat, disusuli dengan demonstrasi penyediaan hidangan bubur oat herba serta snek rendah gula.",
+                        PENCAPAIAN: "Peserta memberikan maklum balas sangat positif. Sesi soal jawab aktif terutamanya membabitkan kawalan karbohidrat.",
+                        ISU: "Tiada isu besar dihadapi.",
+                        PENAMBAHBAIKAN: "Sediakan risalah resipi bercetak untuk diagihkan kepada setiap peserta.",
+                        GAMBAR_1: "", GAMBAR_2: "", GAMBAR_3: "", GAMBAR_4: ""
+                    }
+                ];
+                saveToLocalStorage();
+            }
+        }
+
+        // Save to LocalStorage
+        function saveToLocalStorage() {
+            localStorage.setItem('kkbs_laporan_data', JSON.stringify(reports));
+        }
+
+        // Load Apps Script API Url
+        function loadAppsScriptSetting() {
+            const url = localStorage.getItem('kkbs_apps_script_url');
+            if (url) {
+                document.getElementById('apps-script-url').value = url;
+                document.getElementById('sync-status-badge').innerHTML = `
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-1.5"></span>
+                    Tersambung API
+                `;
+                document.getElementById('sync-status-badge').className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/50 text-emerald-200 border border-emerald-500/30";
+            }
+        }
+
+        // Save Apps Script Setting
+        function saveAppsScriptUrl() {
+            const url = document.getElementById('apps-script-url').value.trim();
+            if (url) {
+                localStorage.setItem('kkbs_apps_script_url', url);
+                showToast("URL API Apps Script telah disimpan!", "success");
+                loadAppsScriptSetting();
+            } else {
+                localStorage.removeItem('kkbs_apps_script_url');
+                document.getElementById('sync-status-badge').innerHTML = `
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-1.5 animate-pulse"></span>
+                    Mod Tempatan
+                `;
+                document.getElementById('sync-status-badge').className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-900/50 text-amber-200 border border-amber-500/30";
+                showToast("Menggunakan mod storan tempatan.", "info");
+            }
+        }
+
+        // Navigation tab switching
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            // Show active tab
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Set nav styles
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('active-nav');
+            });
+            document.getElementById(`nav-${tabId}`).classList.add('active-nav');
+
+            if (tabId === 'dashboard') {
+                renderDashboard();
+                updateCharts();
+            } else if (tabId === 'list') {
+                renderReportsList();
+            }
+        }
+
+        // Render Dashboard Statistics & Lists
+        function renderDashboard() {
+            document.getElementById('stat-total-reports').textContent = reports.length;
+            
+            const totalParticipants = reports.reduce((acc, curr) => acc + Number(curr.BIL_PESERTA || 0), 0);
+            document.getElementById('stat-total-participants').textContent = totalParticipants;
+
+            // Month calculation (Current June 2026 context)
+            const currentMonthReports = reports.filter(r => {
+                const date = new Date(r.TARIKH);
+                return date.getMonth() === 5 && date.getFullYear() === 2026; // June
+            }).length;
+            document.getElementById('stat-month-reports').textContent = currentMonthReports;
+
+            const avg = reports.length > 0 ? Math.round(totalParticipants / reports.length) : 0;
+            document.getElementById('stat-avg-participants').textContent = avg;
+
+            // Render Recent List (Max 3)
+            const recentContainer = document.getElementById('dashboard-recent-list');
+            if (reports.length === 0) {
+                recentContainer.innerHTML = `
+                    <div class="py-8 text-center text-slate-400 text-sm">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                        Tiada rekod pelaporan disimpan lagi.
+                    </div>
+                `;
+                return;
+            }
+
+            const sorted = [...reports].sort((a, b) => new Date(b.TARIKH) - new Date(a.TARIKH)).slice(0, 3);
+            recentContainer.innerHTML = '';
+            sorted.forEach(item => {
+                const element = document.createElement('div');
+                element.className = "py-3 flex items-center justify-between hover:bg-slate-50/50 transition px-2 rounded-xl";
+                element.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-emerald-50 rounded-xl text-primary-700">
+                            <i class="fa-solid fa-file-pdf text-base"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800 line-clamp-1">${item.NAMA_AKTIVITI}</h4>
+                            <div class="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5">
+                                <span><i class="fa-regular fa-calendar mr-1"></i>${formatDate(item.TARIKH)}</span>
+                                <span>&bull;</span>
+                                <span><i class="fa-solid fa-location-dot mr-1"></i>${item.TEMPAT}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <button onclick="downloadReportPDF('${item.id}')" class="p-2 text-slate-500 hover:text-red-600 transition" title="Muat Turun PDF">
+                            <i class="fa-solid fa-download"></i>
+                        </button>
+                        <button onclick="editReport('${item.id}')" class="p-2 text-slate-500 hover:text-primary-600 transition" title="Edit Laporan">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
+                `;
+                recentContainer.appendChild(element);
+            });
+        }
+
+        // Render full Reports List (Tab 3)
+        function renderReportsList() {
+            const container = document.getElementById('reports-list-container');
+            container.innerHTML = '';
+
+            if (reports.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-100">
+                        <i class="fa-solid fa-folder-open text-4xl mb-3 block text-slate-300"></i>
+                        Tiada laporan dijumpai.
+                    </div>
+                `;
+                return;
+            }
+
+            reports.forEach(item => {
+                const hasImages = (item.GAMBAR_1 || item.GAMBAR_2 || item.GAMBAR_3 || item.GAMBAR_4);
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-primary-700">
+                                ${item.SASARAN}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-medium">${formatDate(item.TARIKH)}</span>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-900 mt-2 line-clamp-2 leading-snug">${item.NAMA_AKTIVITI}</h4>
+                        
+                        <div class="space-y-1.5 mt-3 text-xs text-slate-600">
+                            <p class="flex items-center"><i class="fa-solid fa-location-dot w-4 text-slate-400"></i> <span class="truncate ml-1">${item.TEMPAT}</span></p>
+                            <p class="flex items-center"><i class="fa-solid fa-clock w-4 text-slate-400"></i> <span class="truncate ml-1">${item.MASA}</span></p>
+                            <p class="flex items-center"><i class="fa-solid fa-users w-4 text-slate-400"></i> <span class="ml-1">${item.BIL_PESERTA} Peserta</span></p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 mt-4 pt-3 flex items-center justify-between">
+                        <span class="text-[10px] font-medium text-slate-400">
+                            <i class="fa-regular fa-image mr-1"></i> ${hasImages ? 'Bergambar' : 'Tiada Gambar'}
+                        </span>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="downloadReportPDF('${item.id}')" class="p-1.5 bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg transition text-xs flex items-center space-x-1" title="Muat turun PDF">
+                                <i class="fa-solid fa-file-pdf"></i>
+                                <span>PDF</span>
+                            </button>
+                            <button onclick="editReport('${item.id}')" class="p-1.5 bg-slate-50 hover:bg-primary-50 text-slate-600 hover:text-primary-600 rounded-lg transition text-xs" title="Edit">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteReport('${item.id}')" class="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-lg transition text-xs" title="Hapus">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Filter search input
+        function filterReports() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const cards = document.querySelectorAll('#reports-list-container > div');
+            
+            cards.forEach((card, index) => {
+                const report = reports[index];
+                if (!report) return;
+
+                const match = report.NAMA_AKTIVITI.toLowerCase().includes(query) || 
+                              report.TEMPAT.toLowerCase().includes(query) || 
+                              report.SASARAN.toLowerCase().includes(query) ||
+                              report.ANGGOTA_TERLIBAT.toLowerCase().includes(query);
+                
+                if (match) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        // Handle Form Submit
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const reportId = document.getElementById('report-id').value;
+            const isEdit = reportId !== "";
+
+            const payload = {
+                id: isEdit ? reportId : Date.now().toString(),
+                NAMA_AKTIVITI: document.getElementById('NAMA_AKTIVITI').value,
+                TARIKH: document.getElementById('TARIKH').value,
+                MASA: document.getElementById('MASA').value,
+                TEMPAT: document.getElementById('TEMPAT').value,
+                SASARAN: document.getElementById('SASARAN').value,
+                BIL_PESERTA: Number(document.getElementById('BIL_PESERTA').value),
+                ANGGOTA_TERLIBAT: document.getElementById('ANGGOTA_TERLIBAT').value,
+                OBJEKTIF: document.getElementById('OBJEKTIF').value,
+                PELAKSANAAN: document.getElementById('PELAKSANAAN').value,
+                PENCAPAIAN: document.getElementById('PENCAPAIAN').value,
+                ISU: document.getElementById('ISU').value,
+                PENAMBAHBAIKAN: document.getElementById('PENAMBAHBAIKAN').value,
+                GAMBAR_1: document.getElementById('GAMBAR_1_store').value || "",
+                GAMBAR_2: document.getElementById('GAMBAR_2_store').value || "",
+                GAMBAR_3: document.getElementById('GAMBAR_3_store').value || "",
+                GAMBAR_4: document.getElementById('GAMBAR_4_store').value || ""
+            };
+
+            if (isEdit) {
+                const idx = reports.findIndex(r => r.id === reportId);
+                if (idx > -1) reports[idx] = payload;
+                showToast("Laporan berjaya dikemas kini!", "success");
+            } else {
+                reports.push(payload);
+                showToast("Laporan baharu berjaya disimpan!", "success");
+            }
+
+            saveToLocalStorage();
+            
+            // Sync to Google Sheets if API URL set
+            const apiUrl = localStorage.getItem('kkbs_apps_script_url');
+            if (apiUrl) {
+                syncWithGoogleSheets(apiUrl, payload);
+            }
+
+            clearForm();
+            switchTab('dashboard');
+        }
+
+        // Sync via Apps Script
+        function syncWithGoogleSheets(url, data) {
+            fetch(url, {
+                method: "POST",
+                mode: "no-cors", // Required to bypass CORS restriction for App Script web app redirects
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                showToast("Data disegerakkan ke Google Sheets!", "success");
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Segerak Google Sheets gagal, disimpan secara tempatan sahaja.", "warning");
+            });
+        }
+
+        // Previews of Image uploads & compress slightly
+        function previewImage(input, previewId, storeId) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgBase64 = e.target.result;
+                // Store base64 in hidden input
+                document.getElementById(storeId).value = imgBase64;
+                
+                // Show thumbnail preview
+                const prevDiv = document.getElementById(previewId);
+                prevDiv.innerHTML = `
+                    <div class="relative w-full h-full">
+                        <img src="${imgBase64}" class="w-full h-24 object-cover rounded-lg">
+                        <button type="button" onclick="removeImage('${previewId}', '${storeId}', '${input.id}')" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-1 text-[8px] hover:bg-rose-600 shadow-md">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Delete Image
+        function removeImage(previewId, storeId, inputId) {
+            document.getElementById(storeId).value = "";
+            document.getElementById(inputId).value = "";
+            const num = previewId.split('_')[1];
+            document.getElementById(previewId).innerHTML = `
+                <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                <span class="text-[11px] font-semibold text-slate-500">Gambar ${num}</span>
+                <span class="text-[9px] text-slate-400">Pilih Fail</span>
+            `;
+        }
+
+        // Edit Report Action
+        function editReport(id) {
+            const report = reports.find(r => r.id === id);
+            if (!report) return;
+
+            document.getElementById('report-id').value = report.id;
+            document.getElementById('NAMA_AKTIVITI').value = report.NAMA_AKTIVITI;
+            document.getElementById('TARIKH').value = report.TARIKH;
+            document.getElementById('MASA').value = report.MASA;
+            document.getElementById('TEMPAT').value = report.TEMPAT;
+            document.getElementById('SASARAN').value = report.SASARAN;
+            document.getElementById('BIL_PESERTA').value = report.BIL_PESERTA;
+            document.getElementById('ANGGOTA_TERLIBAT').value = report.ANGGOTA_TERLIBAT;
+            document.getElementById('OBJEKTIF').value = report.OBJEKTIF;
+            document.getElementById('PELAKSANAAN').value = report.PELAKSANAAN;
+            document.getElementById('PENCAPAIAN').value = report.PENCAPAIAN;
+            document.getElementById('ISU').value = report.ISU;
+            document.getElementById('PENAMBAHBAIKAN').value = report.PENAMBAHBAIKAN;
+
+            // Load saved image values
+            for (let i = 1; i <= 4; i++) {
+                const imgData = report[`GAMBAR_${i}`];
+                const store = document.getElementById(`GAMBAR_${i}_store`);
+                const prev = document.getElementById(`GAMBAR_${i}_prev`);
+                
+                if (imgData) {
+                    store.value = imgData;
+                    prev.innerHTML = `
+                        <div class="relative w-full h-full">
+                            <img src="${imgData}" class="w-full h-24 object-cover rounded-lg">
+                            <button type="button" onclick="removeImage('GAMBAR_${i}_prev', 'GAMBAR_${i}_store', 'GAMBAR_${i}_input')" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-1 text-[8px] hover:bg-rose-600 shadow-md">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    store.value = "";
+                    prev.innerHTML = `
+                        <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                        <span class="text-[11px] font-semibold text-slate-500">Gambar ${i}</span>
+                        <span class="text-[9px] text-slate-400">Pilih Fail</span>
+                    `;
+                }
+            }
+
+            document.getElementById('form-title-mode').textContent = "Edit Laporan Aktiviti";
+            document.getElementById('btn-submit').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Kemaskini Laporan</span>`;
+            switchTab('form');
+        }
+
+        // Delete Report Action
+        function deleteReport(id) {
+            // Replaces browser confirm
+            const consent = confirm("Adakah anda pasti mahu memadamkan laporan ini?");
+            if (consent) {
+                reports = reports.filter(r => r.id !== id);
+                saveToLocalStorage();
+                renderReportsList();
+                showToast("Laporan telah dipadamkan", "info");
+            }
+        }
+
+        // Clear Form inputs
+        function clearForm() {
+            document.getElementById('activity-form').reset();
+            document.getElementById('report-id').value = "";
+            document.getElementById('form-title-mode').textContent = "Borang Laporan Aktiviti Baharu";
+            document.getElementById('btn-submit').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Simpan Laporan & Segerak</span>`;
+            
+            // Clear image previews
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`GAMBAR_${i}_store`).value = "";
+                document.getElementById(`GAMBAR_${i}_prev`).innerHTML = `
+                    <i class="fa-regular fa-image text-slate-400 text-2xl mb-1.5"></i>
+                    <span class="text-[11px] font-semibold text-slate-500">Gambar ${i}</span>
+                    <span class="text-[9px] text-slate-400">Pilih Fail</span>
+                `;
+            }
+        }
+
+        // Generate and Download PDF using html2pdf
+        function downloadReportPDF(id) {
+            const report = reports.find(r => r.id === id);
+            if (!report) return;
+
+            showToast("Menjana dokumen PDF...", "info");
+
+            // Fill hidden template
+            document.getElementById('pdf-nama').textContent = report.NAMA_AKTIVITI;
+            document.getElementById('pdf-tarikh-masa').textContent = `${formatDate(report.TARIKH)} / ${report.MASA}`;
+            document.getElementById('pdf-tempat').textContent = report.TEMPAT;
+            document.getElementById('pdf-sasaran-peserta').textContent = `${report.SASARAN} (${report.BIL_PESERTA} Orang)`;
+            document.getElementById('pdf-anggota').textContent = report.ANGGOTA_TERLIBAT;
+            
+            document.getElementById('pdf-objektif').innerHTML = report.OBJEKTIF.replace(/\n/g, '<br>');
+            document.getElementById('pdf-pelaksanaan').innerHTML = report.PELAKSANAAN.replace(/\n/g, '<br>');
+            document.getElementById('pdf-pencapaian').innerHTML = report.PENCAPAIAN.replace(/\n/g, '<br>');
+            document.getElementById('pdf-isu').innerHTML = (report.ISU || "Tiada isu/kekangan yang dilaporkan.").replace(/\n/g, '<br>');
+            document.getElementById('pdf-penambahbaikan').innerHTML = (report.PENAMBAHBAIKAN || "Tiada cadangan penambahbaikan.").replace(/\n/g, '<br>');
+
+            // Assign Images & Handle Container Visibility to prevent console warnings
+            let hasAnyImage = false;
+            const TRANSPARENT_GIF = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            
+            for (let i = 1; i <= 4; i++) {
+                const imgEl = document.getElementById(`pdf-img-${i}`);
+                const containerEl = document.getElementById(`pdf-img-container-${i}`);
+                if (report[`GAMBAR_${i}`]) {
+                    imgEl.src = report[`GAMBAR_${i}`];
+                    containerEl.classList.remove('hidden');
+                    hasAnyImage = true;
+                } else {
+                    imgEl.src = TRANSPARENT_GIF;
+                    containerEl.classList.add('hidden');
+                }
+            }
+
+            // Hide or show the whole Attachment Section dynamically
+            const lampiranSection = document.getElementById('pdf-lampiran-section');
+            if (hasAnyImage) {
+                lampiranSection.classList.remove('hidden');
+            } else {
+                lampiranSection.classList.add('hidden');
+            }
+
+            // Options for html2pdf - FIXED FOR MARGIN CUT-OFFS (0 margin with box-sizing on elements)
+            const opt = {
+                margin:       0, // Zero outer margin. The template handles margin precisely via inner padding
+                filename:     `Laporan_KelabWargaEmas_KKBS_${report.TARIKH}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            const element = document.getElementById('pdf-template');
+            element.classList.remove('hidden'); // momentarily display for rendering
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.add('hidden'); // hide again after render
+                showToast("PDF berjaya dimuat turun!", "success");
+            }).catch(err => {
+                element.classList.add('hidden');
+                console.error(err);
+                showToast("Ralat penjanaan PDF.", "warning");
+            });
+        }
+
+        // Chart.js Visualizations
+        function initCharts() {
+            // Chart 1: Trend Kehadiran
+            const ctx1 = document.getElementById('participantsChart').getContext('2d');
+            pChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Peserta',
+                        data: [],
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Chart 2: Kategori Sasaran
+            const ctx2 = document.getElementById('sasaranChart').getContext('2d');
+            sChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                    }
+                }
+            });
+
+            updateCharts();
+        }
+
+        function updateCharts() {
+            if (!pChart || !sChart) return;
+
+            // Prepare Data for Chart 1 (Last 5 activities chronological)
+            const sorted = [...reports].sort((a, b) => new Date(a.TARIKH) - new Date(b.TARIKH));
+            const recentStats = sorted.slice(-5);
+            
+            pChart.data.labels = recentStats.map(r => r.NAMA_AKTIVITI.length > 15 ? r.NAMA_AKTIVITI.substring(0, 15) + "..." : r.NAMA_AKTIVITI);
+            pChart.data.datasets[0].data = recentStats.map(r => r.BIL_PESERTA);
+            pChart.update();
+
+            // Prepare Data for Chart 2
+            const sasaranCounts = {};
+            reports.forEach(r => {
+                sasaranCounts[r.SASARAN] = (sasaranCounts[r.SASARAN] || 0) + 1;
+            });
+
+            sChart.data.labels = Object.keys(sasaranCounts);
+            sChart.data.datasets[0].data = Object.values(sasaranCounts);
+            sChart.update();
+        }
+
+        // Helper: Format Date
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        // Custom Toast Box
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const text = document.getElementById('toast-message');
+
+            if (type === "success") {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                icon.className = "text-emerald-400";
+            } else if (type === "warning") {
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                icon.className = "text-rose-400";
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+                icon.className = "text-blue-400";
+            }
+
+            text.textContent = message;
+            toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 transition duration-300 opacity-100";
+
+            setTimeout(() => {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 transition duration-300 opacity-0 pointer-events-none";
+            }, 3000);
+        }
+
+        // Copy Code utility
+        function copyCode() {
+            const code = document.getElementById('code-snippet').innerText;
+            const temp = document.createElement('textarea');
+            temp.value = code;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast("Kod Apps Script disalin!", "success");
+        }
+    </script>
+</body>
+</html>
